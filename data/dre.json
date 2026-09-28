@@ -1,0 +1,37 @@
+{
+  "janeiro-tbw-sp": {
+    "custoEvento": 145362.33,
+    "custoCaches": 53200,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  },
+  "marco-tbw-poa": {
+    "custoEvento": 72767.17,
+    "custoCaches": 56400,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  },
+  "abril-tbw-sp": {
+    "custoEvento": 143102.74,
+    "custoCaches": 57300,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  },
+  "abril-tbd-sp": {
+    "custoEvento": 18832.49,
+    "custoCaches": 5000,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  },
+  "julho-tbw-poa": {
+    "custoEvento": 69848.14,
+    "custoCaches": 57200,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  },
+  "agosto-tbw-poa": {
+    "custoEvento": 74767.25,
+    "custoCaches": 38400,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  },
+  "agosto-tbd-sp": {
+    "custoEvento": 40898.68,
+    "custoCaches": 5000,
+    "notas": "Custos a partir do fechamento CSX (100% dos contratos). Sem orçamento previsto lançado."
+  }
+}
