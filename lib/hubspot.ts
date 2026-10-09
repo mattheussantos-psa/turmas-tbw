@@ -41,11 +41,34 @@ function headers() {
 
 // Toda chamada passa por aqui: se o HubSpot responder erro ele estoura com status e corpo, em vez
 // de quebrar depois num .json() de uma página de HTML.
+//
+// Em 403 por scope faltando, o próprio HubSpot nomeia o que falta em context.requiredGranularScopes.
+// É a única fonte confiável disso: qual scope cada endpoint exige não está documentado de forma
+// completa, então em vez de adivinhar a lista nós mostramos a resposta da API.
 async function hs(caminho: string, init?: RequestInit) {
   const res = await fetch(BASE + caminho, { ...init, headers: headers(), cache: "no-store" });
   if (!res.ok) {
     const corpo = await res.text().catch(() => "");
-    throw new Error(`HubSpot ${init?.method || "GET"} ${caminho} → ${res.status}: ${corpo.slice(0, 300)}`);
+    const metodo = init?.method || "GET";
+
+    if (res.status === 403) {
+      let exigidos: string[] = [];
+      try {
+        const j = JSON.parse(corpo);
+        exigidos = j?.context?.requiredGranularScopes ?? j?.requiredGranularScopes ?? [];
+      } catch {
+        // corpo não-JSON: segue para a mensagem genérica abaixo, com o texto cru
+      }
+      if (exigidos.length) {
+        throw new Error(
+          `O token não tem scope para ${metodo} ${caminho}. O HubSpot diz que basta UM destes: ` +
+            `${exigidos.join(", ")}. Adicione no Private App, gere o token de novo e refaça o deploy.`
+        );
+      }
+      throw new Error(`HubSpot negou ${metodo} ${caminho} (403). Resposta: ${corpo.slice(0, 400)}`);
+    }
+
+    throw new Error(`HubSpot ${metodo} ${caminho} → ${res.status}: ${corpo.slice(0, 300)}`);
   }
   return res.json();
 }

@@ -38,6 +38,14 @@ Um aluno é **um negócio ganho do Funil de Vendas B2C**. O que o `/api/alunos` 
 Filtro: `pipeline = 725182862` (Funil de Vendas B2C) e `dealstage = 1105295876` (Ganho).
 Cuidado: existe um `1076664460` com label "Ganho / Contrato assinado" que é do funil **B2B**.
 
+### Scopes
+
+A lista no `.env.example` é ponto de partida, não verificação — qual scope cada endpoint do HubSpot
+exige não está documentado por completo. A fonte confiável é a própria API: em 403 ela devolve
+`context.requiredGranularScopes` com os nomes exatos, e `lib/hubspot.ts` mostra isso na tela em vez
+de pedir para adivinhar. Atenção ao `/crm/v3/properties`, que é endpoint de **schema** e pode exigir
+`crm.schemas.deals.read` além do `crm.objects.deals.read`.
+
 ### Dois detalhes que mordem
 
 1. **O value do enum não bate com o label.** A API devolve o *value*; o painel precisa mostrar o
