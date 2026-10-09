@@ -14,6 +14,25 @@ const PROP_PRODUTO = "produto_de_interesse";
 // e ficam de fora do painel.
 const NAO_E_TURMA = new Set(["Não se aplica", "Nenhuma", "Cancelado", ""]);
 
+// O painel é das turmas deste ano. Para virar 2027, muda só esta linha.
+const ANO = Number((process.env.HUBSPOT_ANO ?? "").trim()) || 2026;
+
+// "The Best Weekend" por extenso come metade da largura do rótulo na tela e some atrás das
+// reticências. Também colapsa espaço duplo, que existe em pelo menos um rótulo do HubSpot.
+function encurtar(turma: string): string {
+  return turma.replace(/The Best Weekend/gi, "TBW").replace(/\s+/g, " ").trim();
+}
+
+// Os rótulos citam o ano de três jeitos diferentes: "/26", "/2026" e " 2026". Um rótulo sem ano
+// nenhum é MANTIDO de propósito: se criarem uma opção nova no HubSpot em outro formato, ela aparece
+// na tela em vez de sumir calada do painel.
+export function ehDoAno(turma: string, ano = ANO): boolean {
+  const anos = new Set<number>();
+  (turma.match(/\b20\d{2}\b/g) ?? []).forEach((a) => anos.add(Number(a)));
+  (turma.match(/\/\d{2}\b/g) ?? []).forEach((a) => anos.add(2000 + Number(a.slice(1))));
+  return anos.size === 0 || anos.has(ano);
+}
+
 // Diz em que estado a variável chegou ao runtime, sem nunca revelar o valor. "existe mas vazia" e
 // "não existe" são problemas diferentes (um é cadastro em branco, o outro é escopo/redeploy), e a
 // mensagem genérica de antes mandava procurar no lugar errado.
@@ -190,8 +209,8 @@ export function montarAlunos(
   for (const d of brutos) {
     const turmaValue = (d.properties[PROP_TURMA] ?? "").trim();
     if (NAO_E_TURMA.has(turmaValue)) continue;
-    const turma = traduzir(turmaValue, turmaLabel);
-    if (!turma) continue;
+    const turma = encurtar(traduzir(turmaValue, turmaLabel));
+    if (!turma || !ehDoAno(turma)) continue;
 
     const produto = traduzir(d.properties[PROP_PRODUTO], produtoLabel);
     const amount = d.properties.amount;

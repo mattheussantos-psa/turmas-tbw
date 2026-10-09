@@ -3,7 +3,7 @@
 // enum não bate com o label) e o alinhamento de perguntas entre dias de avaliação.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { montarAlunos } from "./lib/hubspot.ts";
+import { ehDoAno, montarAlunos } from "./lib/hubspot.ts";
 
 // ---- mapeamento dos negócios vindos do HubSpot ----
 {
@@ -85,14 +85,14 @@ import { montarAlunos } from "./lib/hubspot.ts";
   const porId = Object.fromEntries(alunos.map((a) => [a.key, a]));
 
   // O que mais importa: a turma mostrada é o LABEL, não o value.
-  assert.equal(porId["1"].turma, "The Best Weekend SP | Abril 2026");
-  assert.equal(porId["2"].turma, "The Best Weekend POA | Julho 2026");
+  assert.equal(porId["1"].turma, "TBW SP | Abril 2026");
+  assert.equal(porId["2"].turma, "TBW POA | Julho 2026");
 
   // Produto multi-seleção: cada parte traduzida, juntas num rótulo só.
   assert.equal(porId["2"].produto, "The Best Day + Ecossistema");
 
   // Turma multi-seleção: cada parte traduzida, nenhuma crua.
-  assert.equal(porId["5"].turma, "The Best Weekend SP | Abril 2026 + TBW POA | Outubro/26");
+  assert.equal(porId["5"].turma, "TBW SP | Abril 2026 + TBW POA | Outubro/26");
   assert.equal(porId["4"].produto, "The Best Start");
 
   // Nome vem do contato associado; sem contato, cai no nome do negócio.
@@ -108,6 +108,29 @@ import { montarAlunos } from "./lib/hubspot.ts";
 
   // Cada negócio tem id próprio, então a chave da linha nunca colide.
   assert.equal(new Set(alunos.map((a) => a.key)).size, alunos.length);
+}
+
+// ---- recorte do ano e encurtamento do rótulo ----
+{
+  // Os três formatos de ano que aparecem nos rótulos reais do HubSpot.
+  assert.equal(ehDoAno("TBW POA | Dezembro/26", 2026), true);
+  assert.equal(ehDoAno("TBW - POA/Agosto/2026", 2026), true);
+  assert.equal(ehDoAno("TBW POA | Julho 2026", 2026), true);
+  assert.equal(ehDoAno("TBW 2026", 2026), true);
+
+  // Fora do ano: 2025 e 2027 saem.
+  assert.equal(ehDoAno("TBW | dezembro/25", 2026), false);
+  assert.equal(ehDoAno("TBW | outubro/25", 2026), false);
+  assert.equal(ehDoAno("TBW | Lista de espera/27", 2026), false);
+
+  // "/2026" não pode ser lido como o ano 20 por causa dos dois primeiros dígitos.
+  assert.equal(ehDoAno("TBW - POA/Agosto/2026", 2020), false);
+
+  // Rótulo composto entra se qualquer parte for do ano.
+  assert.equal(ehDoAno("TBW SP | Abril 2026 + Pré TBW | Abril/26", 2026), true);
+
+  // Sem ano nenhum: mantém, para não sumir calado da tela.
+  assert.equal(ehDoAno("Turma nova sem ano", 2026), true);
 }
 
 // ---- alinhamento de perguntas entre dias de avaliação ----

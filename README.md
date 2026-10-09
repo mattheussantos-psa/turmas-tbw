@@ -36,6 +36,13 @@ Um aluno é **um negócio ganho do Funil de Vendas B2C**. O que o `/api/alunos` 
 | Valor pago | `amount` |
 
 Filtro: `pipeline = 725182862` (Funil de Vendas B2C) e `dealstage = 1105295876` (Ganho).
+
+Além disso o painel só mostra **turmas do ano corrente** (`ANO` em `lib/hubspot.ts`, hoje 2026,
+sobrescritível por `HUBSPOT_ANO`). Os rótulos citam o ano de três jeitos — `/26`, `/2026` e ` 2026` —
+e os três são reconhecidos. Um rótulo **sem ano nenhum** é mantido de propósito: se criarem uma opção
+nova em outro formato, ela aparece na tela em vez de sumir calada.
+
+`The Best Weekend` é encurtado para `TBW` na exibição, porque o nome por extenso não cabe na coluna.
 Cuidado: existe um `1076664460` com label "Ganho / Contrato assinado" que é do funil **B2B**.
 
 ### Scopes
