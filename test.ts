@@ -61,6 +61,17 @@ import { montarAlunos } from "./lib/hubspot.ts";
         dealname: "",
       },
     },
+    // A turma também é multi-seleção: valor composto tem que traduzir parte por parte, senão cai
+    // na tela sem tradução nenhuma (foi o que aconteceu na primeira carga real).
+    {
+      id: "5",
+      properties: {
+        turma_the_best_weekend_: "The Best Weekend SP | Fevereiro 2026;TBW POA | Outubro/26",
+        produto_de_interesse: "TBW Weekend (Presencial)",
+        amount: "9000",
+        dealname: "Duplo | TBW",
+      },
+    },
   ];
 
   const nomes = new Map([
@@ -70,7 +81,7 @@ import { montarAlunos } from "./lib/hubspot.ts";
 
   const alunos = montarAlunos(brutos, nomes, turmaLabel, produtoLabel, "49656171");
 
-  assert.equal(alunos.length, 3, '"Não se aplica" deveria ter ficado de fora');
+  assert.equal(alunos.length, 4, '"Não se aplica" deveria ter ficado de fora');
   const porId = Object.fromEntries(alunos.map((a) => [a.key, a]));
 
   // O que mais importa: a turma mostrada é o LABEL, não o value.
@@ -79,6 +90,9 @@ import { montarAlunos } from "./lib/hubspot.ts";
 
   // Produto multi-seleção: cada parte traduzida, juntas num rótulo só.
   assert.equal(porId["2"].produto, "The Best Day + Ecossistema");
+
+  // Turma multi-seleção: cada parte traduzida, nenhuma crua.
+  assert.equal(porId["5"].turma, "The Best Weekend SP | Abril 2026 + TBW POA | Outubro/26");
   assert.equal(porId["4"].produto, "The Best Start");
 
   // Nome vem do contato associado; sem contato, cai no nome do negócio.

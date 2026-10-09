@@ -165,6 +165,20 @@ async function contatoPorNegocio(dealIds: string[]): Promise<Map<string, string>
   return out;
 }
 
+// As DUAS propriedades são multi-seleção: vêm "A;B" e cada parte precisa do próprio rótulo. Tratar
+// o valor composto como uma coisa só faz ele não bater no mapa e cair na tela sem tradução.
+// Um negócio com duas turmas marcadas aparece como "Turma A + Turma B" de propósito: é quase sempre
+// preenchimento duplicado no CRM, e some-lo numa das duas escondia o problema de quem precisa
+// corrigir.
+function traduzir(bruto: string | null | undefined, rotulo: Map<string, string>): string {
+  return (bruto ?? "")
+    .split(";")
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .map((v) => rotulo.get(v) ?? v)
+    .join(" + ");
+}
+
 export function montarAlunos(
   brutos: DealBruto[],
   nomes: Map<string, string>,
@@ -176,20 +190,15 @@ export function montarAlunos(
   for (const d of brutos) {
     const turmaValue = (d.properties[PROP_TURMA] ?? "").trim();
     if (NAO_E_TURMA.has(turmaValue)) continue;
+    const turma = traduzir(turmaValue, turmaLabel);
+    if (!turma) continue;
 
-    // produto_de_interesse é multi-seleção: vem "A;B" e cada parte precisa do próprio rótulo.
-    const produto = (d.properties[PROP_PRODUTO] ?? "")
-      .split(";")
-      .map((v) => v.trim())
-      .filter(Boolean)
-      .map((v) => produtoLabel.get(v) ?? v)
-      .join(" + ");
-
+    const produto = traduzir(d.properties[PROP_PRODUTO], produtoLabel);
     const amount = d.properties.amount;
     alunos.push({
       key: d.id,
       name: nomes.get(d.id) || (d.properties.dealname ?? "").trim() || "(sem contato associado)",
-      turma: turmaLabel.get(turmaValue) ?? turmaValue,
+      turma,
       produto,
       amount: amount === null || amount === undefined || amount === "" ? null : Number(amount),
       // Todo registro aqui é um negócio ganho de verdade, então nasce confirmado. Os status de
