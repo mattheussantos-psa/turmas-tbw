@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { ehDoAno, montarAlunos } from "./lib/hubspot.ts";
+import { monthKey } from "./lib/fmt.ts";
 
 // ---- mapeamento dos negócios vindos do HubSpot ----
 {
@@ -160,6 +161,32 @@ import { ehDoAno, montarAlunos } from "./lib/hubspot.ts";
 
   // Sem ano nenhum: mantém, para não sumir calado da tela.
   assert.equal(ehDoAno("Turma nova sem ano", 2026), true);
+}
+
+// ---- mês dentro do rótulo ----
+{
+  // O mês vem no MEIO do rótulo do HubSpot. Ler só o início fazia tudo cair em 99, o que
+  // embaralhava a ordem das turmas e emperrava a "próxima turma" na primeira do alfabeto.
+  assert.equal(monthKey("TBW POA | Outubro/26"), 10);
+  assert.equal(monthKey("TBW - POA/Agosto/2026"), 8);
+  assert.equal(monthKey("TBW POA | Julho 2026"), 7);
+  assert.equal(monthKey("Pré TBW | Abril/26"), 4);
+  assert.equal(monthKey("TBD RJ | Setembro/26"), 9);
+
+  // Acento não pode atrapalhar.
+  assert.equal(monthKey("TBW POA l  Março/26"), 3);
+
+  // Sem mês reconhecível vai para o fim.
+  assert.equal(monthKey("TBW 2026"), 99);
+
+  // Rótulo com dois meses fica com o que aparece primeiro.
+  assert.equal(monthKey("TBW SP | Abril 2026 + Pré TBW | Dezembro/26"), 4);
+
+  // E a ordem sai em calendário, não em alfabeto.
+  const ordenadas = ["TBW POA | Outubro/26", "Pré TBW | Abril/26", "TBD RJ | Setembro/26"].sort(
+    (a, b) => monthKey(a) - monthKey(b)
+  );
+  assert.deepEqual(ordenadas, ["Pré TBW | Abril/26", "TBD RJ | Setembro/26", "TBW POA | Outubro/26"]);
 }
 
 // ---- alinhamento de perguntas entre dias de avaliação ----

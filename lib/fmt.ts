@@ -5,10 +5,26 @@ export const MONTH_ORDER: Record<string, number> = {
 
 export const ALL_MONTHS = Object.keys(MONTH_ORDER).sort((a, b) => MONTH_ORDER[a] - MONTH_ORDER[b]);
 
-// Turmas sem mês reconhecível vão para o fim da lista.
+const semAcento = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// O mês aparece no MEIO do rótulo do HubSpot ("TBW POA | Outubro/26", "TBW - POA/Agosto/2026"),
+// não no começo como no painel antigo ("Janeiro TBW | SP"). Procurar só no início fazia TODA turma
+// cair em 99: a ordenação por mês virava empate geral e sobrava a ordem alfabética, e a "próxima
+// turma" passava a ser sempre a primeira do alfabeto.
+// Vale o mês que aparece primeiro no texto; turma sem mês reconhecível vai para o fim da lista.
 export function monthKey(turma: string): number {
-  for (const m in MONTH_ORDER) if (turma.startsWith(m)) return MONTH_ORDER[m];
-  return 99;
+  const alvo = semAcento(turma);
+  let mes = 99;
+  let posicao = Infinity;
+  for (const m in MONTH_ORDER) {
+    const i = alvo.indexOf(semAcento(m));
+    if (i !== -1 && i < posicao) {
+      posicao = i;
+      mes = MONTH_ORDER[m];
+    }
+  }
+  return mes;
 }
 
 export function slugify(s: string): string {

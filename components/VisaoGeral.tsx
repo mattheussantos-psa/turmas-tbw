@@ -33,14 +33,32 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
   const alerta = contagem.divergencia + contagem.nao_encontrado;
 
   const turmas = todasTurmas(estado);
-  const porTurma = turmas.map((t) => ({
-    turma: t,
-    count: alunosDaTurma(estado, t).length,
-    receita: receitaDaTurma(estado, t),
-  }));
+
+  // No comparativo geral, todo The Best Day conta como uma linha só — ele roda em várias praças no
+  // mesmo ciclo e separar por cidade picotava o gráfico. O detalhe não some: o popup lista cada
+  // pessoa com a turma real dela, e as abas Turmas e DRE seguem com as turmas separadas.
+  const grupoDaTurma = (t: string) => (/\bTBD\b|The Best Day/i.test(t) ? "TBD" : t);
+
+  const grupos = new Map<string, { turmas: string[]; count: number; receita: number; mes: number }>();
+  for (const t of turmas) {
+    const g = grupoDaTurma(t);
+    const atual = grupos.get(g) ?? { turmas: [], count: 0, receita: 0, mes: 99 };
+    atual.turmas.push(t);
+    atual.count += alunosDaTurma(estado, t).length;
+    atual.receita += receitaDaTurma(estado, t);
+    atual.mes = Math.min(atual.mes, monthKey(t));
+    grupos.set(g, atual);
+  }
+
+  // Ordem de calendário; grupo sem mês reconhecível cai no fim.
+  const porTurma = Array.from(grupos, ([turma, v]) => ({ turma, ...v })).sort(
+    (a, b) => a.mes - b.mes || a.turma.localeCompare(b.turma, "pt-BR")
+  );
 
   const mesAtual = new Date().getMonth() + 1;
-  const proximaTurma = turmas.find((t) => monthKey(t) >= mesAtual) || turmas[0] || null;
+  const emOrdem = turmas.slice().sort((a, b) => monthKey(a) - monthKey(b));
+  const proximaTurma = emOrdem.find((t) => monthKey(t) >= mesAtual) || emOrdem[0] || null;
+  const grupoProximo = proximaTurma ? grupoDaTurma(proximaTurma) : null;
 
   const naEspera = emEspera.length;
   const receitaEmEspera = emEspera.reduce((s, d) => s + valorDaLinha(estado, d), 0);
@@ -77,12 +95,13 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
     });
   }
 
-  function abrirTurma(turma: string, receita: boolean) {
-    const linhas = alunosDaTurma(estado, turma).map(comoLinha);
+  function abrirTurma(grupo: { turma: string; turmas: string[]; receita: number }, receita: boolean) {
+    const turma = grupo.turma;
+    const linhas = grupo.turmas.flatMap((t) => alunosDaTurma(estado, t)).map(comoLinha);
     setAberto({
       titulo: turma,
       subtitulo: receita
-        ? `${linhas.length} aluno(s) · ${fmtMoney(receitaDaTurma(estado, turma))}`
+        ? `${linhas.length} aluno(s) · ${fmtMoney(grupo.receita)}`
         : `${linhas.length} aluno(s) nesta turma`,
       linhas: linhas.sort(ordenarPorNome),
     });
@@ -126,10 +145,10 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
               <Barra
                 key={t.turma}
                 label={t.turma}
-                cor={t.turma === proximaTurma ? "next" : "blue"}
+                cor={t.turma === grupoProximo ? "next" : "blue"}
                 pct={(t.count / maxCount) * 100}
                 valor={`${t.count} aluno${t.count === 1 ? "" : "s"}`}
-                onClick={() => abrirTurma(t.turma, false)}
+                onClick={() => abrirTurma(t, false)}
               />
             ))
           ) : (
@@ -146,7 +165,7 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
                 cor="orange"
                 pct={(t.receita / maxReceita) * 100}
                 valor={fmtMoney(t.receita) || "R$ 0,00"}
-                onClick={() => abrirTurma(t.turma, true)}
+                onClick={() => abrirTurma(t, true)}
               />
             ))
           ) : (
