@@ -4,8 +4,8 @@ const BASE = "https://api.hubapi.com";
 
 // Funil de Vendas B2C e o estágio "Ganho" DESTE funil. Medidos no portal 49656171 em 09/10/2026 —
 // cuidado: existe um "Ganho / Contrato assinado" (1076664460) que é do funil B2B, não serve aqui.
-const PIPELINE = process.env.HUBSPOT_PIPELINE_B2C || "725182862";
-const STAGE_GANHO = process.env.HUBSPOT_STAGE_GANHO || "1105295876";
+const PIPELINE = (process.env.HUBSPOT_PIPELINE_B2C ?? "").trim() || "725182862";
+const STAGE_GANHO = (process.env.HUBSPOT_STAGE_GANHO ?? "").trim() || "1105295876";
 
 const PROP_TURMA = "turma_the_best_weekend_";
 const PROP_PRODUTO = "produto_de_interesse";
@@ -14,9 +14,28 @@ const PROP_PRODUTO = "produto_de_interesse";
 // e ficam de fora do painel.
 const NAO_E_TURMA = new Set(["Não se aplica", "Nenhuma", "Cancelado", ""]);
 
+// Diz em que estado a variável chegou ao runtime, sem nunca revelar o valor. "existe mas vazia" e
+// "não existe" são problemas diferentes (um é cadastro em branco, o outro é escopo/redeploy), e a
+// mensagem genérica de antes mandava procurar no lugar errado.
+function estadoDaVar(nome: string): string {
+  const v = process.env[nome];
+  if (v === undefined) return `${nome}: não chegou ao runtime`;
+  if (v.trim() === "") return `${nome}: existe, mas está vazia`;
+  return `${nome}: ok (${v.trim().length} caracteres)`;
+}
+
 function headers() {
-  const token = process.env.HUBSPOT_TOKEN;
-  if (!token) throw new Error("HUBSPOT_TOKEN ausente — crie a variável de ambiente antes de puxar os dados");
+  const token = (process.env.HUBSPOT_TOKEN ?? "").trim();
+  if (!token) {
+    const diagnostico = ["HUBSPOT_TOKEN", "HUBSPOT_PIPELINE_B2C", "HUBSPOT_STAGE_GANHO"]
+      .map(estadoDaVar)
+      .join(" · ");
+    throw new Error(
+      `Sem token do HubSpot. O que o runtime enxerga agora → ${diagnostico}. ` +
+        `Se a variável existe mas está vazia, preencha o valor; se não chegou ao runtime, confira o ` +
+        `ambiente (Production/Preview) e refaça o deploy, porque a variável só entra no build.`
+    );
+  }
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
 
@@ -149,7 +168,7 @@ export function montarAlunos(
 }
 
 export async function buscarAlunos(): Promise<{ alunos: Deal[]; buscadoEm: string }> {
-  const portalId = process.env.HUBSPOT_PORTAL_ID || "49656171";
+  const portalId = (process.env.HUBSPOT_PORTAL_ID ?? "").trim() || "49656171";
   const [brutos, turmaLabel, produtoLabel] = await Promise.all([
     buscarGanhos(),
     rotulos(PROP_TURMA),
