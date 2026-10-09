@@ -180,7 +180,7 @@ function Kpi({
   );
   if (!onClick) return <div className="kpi">{conteudo}</div>;
   return (
-    <button type="button" className="kpi clicavel" onClick={onClick} title="Ver quem está nesta conta">
+    <button type="button" className="kpi clicavel" onClick={onClick} title="Ver a lista por trás deste número">
       {conteudo}
     </button>
   );
