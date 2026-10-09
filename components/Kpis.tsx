@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { Estado } from "@/lib/tipos";
-import { DEALS } from "@/lib/dados";
 import { ALL_MONTHS, fmtMoney, MONTH_ORDER, monthKey } from "@/lib/fmt";
 import { dealId } from "@/lib/estado";
 import { todasTurmas, valorDaLinha } from "@/lib/derivado";
@@ -14,17 +13,17 @@ type Props = {
 
 // Espelha o cálculo por turma da Visão Geral, só que agrupado por mês — somando turmas do mesmo
 // mês, caso exista mais de uma. Só aparecem meses que já têm turma cadastrada.
-function referenciaPorMes(estado: Estado) {
-  const turmas = todasTurmas(estado);
+function referenciaPorMes(e: Estado) {
+  const turmas = todasTurmas(e);
   const meses = new Set(turmas.map(monthKey).filter((n) => n <= 12));
   return ALL_MONTHS.filter((m) => meses.has(MONTH_ORDER[m])).map((mes) => {
     const turmasDoMes = turmas.filter((t) => monthKey(t) === MONTH_ORDER[mes]);
     let alunos = 0;
     let receita = 0;
-    DEALS.forEach((d) => {
-      if (turmasDoMes.includes(estado.linhas[dealId(d)]?.turma)) {
+    e.deals.forEach((d) => {
+      if (turmasDoMes.includes(e.linhas[dealId(d)]?.turma)) {
         alunos++;
-        receita += valorDaLinha(estado, d);
+        receita += valorDaLinha(e, d);
       }
     });
     return { mes, alunos, receita, ticket: alunos ? receita / alunos : 0 };

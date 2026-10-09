@@ -1,18 +1,17 @@
 "use client";
 
 import type { Estado } from "@/lib/tipos";
-import { DEALS, SNAPSHOT_EM } from "@/lib/dados";
 import { fmtMoney, monthKey } from "@/lib/fmt";
 import { alunosDaTurma, receitaDaTurma, statusEfetivo, todasTurmas, valorDaLinha } from "@/lib/derivado";
 
-export default function VisaoGeral({ estado }: { estado: Estado }) {
+export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; buscadoEm: string }) {
   // Agregados da base inteira — de propósito ignoram os filtros da aba Turmas.
-  const totalAlunos = DEALS.length;
-  const totalReceita = DEALS.reduce((s, d) => s + valorDaLinha(estado, d), 0);
+  const totalAlunos = estado.deals.length;
+  const totalReceita = estado.deals.reduce((s, d) => s + valorDaLinha(estado, d), 0);
   const ticketMedio = totalAlunos ? totalReceita / totalAlunos : 0;
 
   const contagem = { ok: 0, divergencia: 0, nao_encontrado: 0, resolvido: 0 };
-  DEALS.forEach((d) => contagem[statusEfetivo(estado, d)]++);
+  estado.deals.forEach((d) => contagem[statusEfetivo(estado, d)]++);
   const alerta = contagem.divergencia + contagem.nao_encontrado;
 
   const turmas = todasTurmas(estado);
@@ -47,7 +46,7 @@ export default function VisaoGeral({ estado }: { estado: Estado }) {
           <div className="next-turma">{proximaTurma || "nenhuma turma cadastrada"}</div>
         </div>
         <div style={{ textAlign: "right", fontSize: 11, opacity: 0.85, fontFamily: "'Satoshi', sans-serif" }}>
-          Snapshot HubSpot · {SNAPSHOT_EM}
+          HubSpot · {buscadoEm}
         </div>
       </div>
 

@@ -7,7 +7,6 @@ import { fmtMoney, slugify } from "@/lib/fmt";
 import { drePadrao } from "@/lib/estado";
 import { alunosDaTurma, eventosDaPasta, receitaDaTurma } from "@/lib/derivado";
 import { dealId } from "@/lib/estado";
-import { DEALS } from "@/lib/dados";
 
 type Props = {
   estado: Estado;

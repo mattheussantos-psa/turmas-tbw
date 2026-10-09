@@ -1,17 +1,12 @@
-import type { Deal, DiaAvaliacao, DreEstado, Arquivo, Quali } from "./tipos";
-import turmasJson from "@/data/turmas.json";
+import type { DiaAvaliacao, DreEstado, Arquivo, Quali } from "./tipos";
 import esperaJson from "@/data/espera.json";
 import dreJson from "@/data/dre.json";
 import checklistsJson from "@/data/checklists.json";
 import avaliacoesJson from "@/data/avaliacoes.json";
 import qualiJson from "@/data/avaliacoes-quali.json";
 
-// Snapshot dos negócios do HubSpot (Funil de Vendas B2C, stage Ganho) tirado em 02/09/2026.
-// É daqui que a integração entra: trocar esta constante pela leitura em cache do HubSpot
-// não muda mais nada no resto do painel.
-export const SNAPSHOT_EM = "02/09/2026";
-
-export const DEALS: Deal[] = (turmasJson as Omit<Deal, "key">[]).map((d, i) => ({ ...d, key: "r" + i }));
+// Os alunos vêm do HubSpot em /api/alunos (negócios ganhos do Funil de Vendas B2C). O que sobrou
+// aqui é o que ainda não tem origem no CRM: lista de espera, custos de evento e avaliações.
 export const ESPERA_NOMES = esperaJson as string[];
 
 // Custos reais dos fechamentos CSX (DREs) recebidos em 21/09/2026. Não há orçamento previsto
@@ -26,7 +21,7 @@ export const DRE_PASTAS = ["The Best Weekend", "The Best Day", "The Best Speaker
 
 export const PAGE_HEADERS: Record<string, [string, string]> = {
   home: ["Visão Geral", "Painel PSA 2026 · Funil de Vendas B2C · HubSpot"],
-  roster: ["Turmas 2026", "Validado contra lista enviada · Funil de Vendas B2C · HubSpot"],
+  roster: ["Turmas 2026", "Negócios ganhos do Funil de Vendas B2C, direto do HubSpot"],
   waitlist: ["Lista de Espera", "Interessados sem turma confirmada ainda"],
   aval: ["Avaliações", "Respostas dos alunos por turma, dia a dia"],
   kpis: ["KPIs", "Seus indicadores, mês a mês"],

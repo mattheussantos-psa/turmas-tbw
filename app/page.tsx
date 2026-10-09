@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Aba } from "@/lib/tipos";
-import { ABAS, PAGE_HEADERS, SNAPSHOT_EM } from "@/lib/dados";
+import { ABAS, PAGE_HEADERS } from "@/lib/dados";
 import { usePainel } from "@/lib/estado";
 import VisaoGeral from "@/components/VisaoGeral";
 import Turmas from "@/components/Turmas";
@@ -11,10 +11,16 @@ import Avaliacoes from "@/components/Avaliacoes";
 import Kpis from "@/components/Kpis";
 import Dre from "@/components/Dre";
 
+function hora(iso: string) {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
 export default function Page() {
   const [aba, setAba] = useState<Aba>("home");
-  const { estado, atualizar } = usePainel();
+  const { estado, carga, atualizar, recarregar } = usePainel();
   const [titulo, subtitulo] = PAGE_HEADERS[aba];
+  const buscadoEm = carga.fase === "pronto" ? hora(carga.buscadoEm) : "—";
 
   return (
     <div className="shell">
@@ -34,14 +40,14 @@ export default function Page() {
           ))}
         </nav>
         <div className="snapshot">
-          Snapshot HubSpot
+          Dados do HubSpot
           <br />
-          {SNAPSHOT_EM}
+          {buscadoEm}
           <br />
           <br />
-          TBW + TBD
+          Funil de Vendas B2C
           <br />
-          Jan–Dez/2026
+          Negócios ganhos
         </div>
       </div>
 
@@ -51,11 +57,35 @@ export default function Page() {
           <p>{subtitulo}</p>
         </header>
 
-        {/* O estado mora no localStorage, então só renderiza depois da hidratação. */}
+        <div className="filters" style={{ justifyContent: "flex-end" }}>
+          <span className="save-state">
+            {carga.fase === "carregando"
+              ? "buscando no HubSpot..."
+              : carga.fase === "pronto"
+                ? `atualizado em ${buscadoEm}`
+                : "não foi possível buscar"}
+          </span>
+          <button className="folder-tab" onClick={recarregar} disabled={carga.fase === "carregando"}>
+            Atualizar do HubSpot
+          </button>
+        </div>
+
+        {/* A falha aparece inteira, com a mensagem do HubSpot. Esconder viraria retrabalho pra
+            descobrir que era só um scope faltando no token. */}
+        {carga.fase === "erro" && (
+          <div className="callout" style={{ borderLeftColor: "var(--warn)" }}>
+            <strong style={{ color: "var(--warn)" }}>NÃO CONSEGUI BUSCAR OS ALUNOS NO HUBSPOT</strong>
+            <br />
+            <code style={{ fontSize: 11.5 }}>{carga.mensagem}</code>
+          </div>
+        )}
+
         {!estado ? (
-          <div className="eval-empty">Carregando...</div>
+          carga.fase === "erro" ? null : (
+            <div className="eval-empty">Buscando os negócios ganhos no HubSpot...</div>
+          )
         ) : aba === "home" ? (
-          <VisaoGeral estado={estado} />
+          <VisaoGeral estado={estado} buscadoEm={buscadoEm} />
         ) : aba === "roster" ? (
           <Turmas estado={estado} atualizar={atualizar} />
         ) : aba === "waitlist" ? (
@@ -69,9 +99,10 @@ export default function Page() {
         )}
 
         <footer>
-          Fonte: HubSpot · Pipeline &quot;Funil de Vendas B2C&quot; · Deal Stage = Ganho · TBW + TBD, Jan–Dez/2026
+          Fonte: HubSpot · Pipeline &quot;Funil de Vendas B2C&quot; · Deal Stage = Ganho
           <br />
-          Snapshot manual de {SNAPSHOT_EM} — a integração ao vivo com as propriedades do HubSpot é o próximo passo.
+          Turma de <code>turma_the_best_weekend_</code>, produto de <code>produto_de_interesse</code>, valor de{" "}
+          <code>amount</code>, nome do contato associado ao negócio.
         </footer>
       </div>
     </div>

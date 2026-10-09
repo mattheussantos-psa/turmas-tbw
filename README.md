@@ -1,6 +1,6 @@
 # Painel PSA — Turmas 2026
 
-Painel das turmas The Best Weekend / The Best Day de 2026. O layout veio do arquivo
+Painel das turmas The Best Weekend / The Best Day. O layout veio do arquivo
 `dash-psa-turmas-2026-18.html` (artifact de uso único) e foi portado para Next.js para poder ler
 o HubSpot de verdade — o que o HTML não conseguia fazer.
 
@@ -8,44 +8,64 @@ o HubSpot de verdade — o que o HTML não conseguia fazer.
 
 ```
 npm install
-npm run dev     # http://localhost:3000
-npm test        # check do relatório de avaliação + dos agregados do snapshot
+cp .env.example .env.local   # e preencha o HUBSPOT_TOKEN
+npm run dev                  # http://localhost:3000
+npm test                     # check do mapeamento do HubSpot + do relatório de avaliação
 ```
 
-## Abas
+## De onde vem cada aba
 
-| Aba | Fonte do dado |
+| Aba | Fonte |
 |---|---|
-| Visão Geral | agregados calculados sobre `data/turmas.json` |
-| Turmas | `data/turmas.json` — snapshot dos negócios do HubSpot de 02/09/2026 |
+| Visão Geral | agregados sobre os alunos vindos do HubSpot |
+| Turmas | **HubSpot ao vivo** — `/api/alunos` |
 | Lista de Espera | `data/espera.json` — 33 nomes, ainda manual |
 | Avaliações | `data/avaliacoes.json` + PDFs em `public/arquivos/`; aceita upload de planilha |
 | KPIs | referência calculada das turmas + colunas livres do usuário |
 | DRE | `data/dre.json` (fechamentos CSX de 21/09/2026) + fechamentos em `public/arquivos/` |
 
-## Estado do dado
+## A integração
 
-`data/turmas.json` é um **snapshot manual** de 416 negócios do pipeline "Funil de Vendas B2C"
-com stage Ganho, tirado em 02/09/2026. A integração ao vivo ainda não está ligada: quando estiver,
-só `lib/dados.ts` muda — o resto do painel lê dali.
+Um aluno é **um negócio ganho do Funil de Vendas B2C**. O que o `/api/alunos` lê:
 
-Dois detalhes do snapshot que importam:
+| Campo do painel | Origem no HubSpot |
+|---|---|
+| Aluno | `hs_full_name_or_email` do **contato associado** ao negócio |
+| Turma | `turma_the_best_weekend_` |
+| Produto | `produto_de_interesse` |
+| Valor pago | `amount` |
 
-- **143 dos 416 registros não têm `hubspot_id`** (são os marcados como "não encontrado") e há 3 ids
-  repetidos entre pessoas diferentes. Por isso a identidade da linha é a posição no snapshot
-  (`lib/dados.ts`, campo `key`), não o id do negócio. O `test.mjs` trava se isso regredir.
-- 90 registros estão sem valor pago preenchido.
+Filtro: `pipeline = 725182862` (Funil de Vendas B2C) e `dealstage = 1105295876` (Ganho).
+Cuidado: existe um `1076664460` com label "Ganho / Contrato assinado" que é do funil **B2B**.
+
+### Dois detalhes que mordem
+
+1. **O value do enum não bate com o label.** A API devolve o *value*; o painel precisa mostrar o
+   *label*. Exemplos reais: o value `The Best Weekend SP | Fevereiro 2026` tem label
+   "The Best Weekend SP | **Abril** 2026"; o value `The Best Weekend SP | Julho/26` tem label
+   "The Best Weekend **POA** | Julho 2026"; em produto, `Pré The Best Weekend` tem label
+   "**The Best Day**" e `Amolador` é "**The Best Start**". Por isso `lib/hubspot.ts` busca as
+   opções da propriedade e traduz value → label. O `test.ts` trava se isso regredir.
+2. **`produto_de_interesse` é multi-seleção**, separada por `;`. Cada parte é traduzida e elas são
+   juntadas com " + ".
+
+### Cache
+
+`/api/alunos` guarda o resultado em cache (`unstable_cache`, tag `alunos`). O botão "Atualizar do
+HubSpot" chama `/api/alunos?refresh=1`, que invalida a tag e busca de novo. Entre um refresh e
+outro todo mundo lê o mesmo resultado, sem bater no HubSpot a cada acesso.
 
 ## Edições
 
 Status, nota, valor, onboarding, mentoria, DRE e KPIs são editáveis e ficam no `localStorage` do
-navegador (`painel-turmas:v1`) — não são compartilhados entre pessoas nem entre máquinas. Quando
+navegador (`painel-turmas:v2`) — não são compartilhados entre pessoas nem entre máquinas. Quando
 esses campos virarem propriedades de negócio no HubSpot, a gravação passa a ser lá.
 
-## O que ficou de fora do porte
+## O que ficou de fora
 
-- **Upload de fechamento na aba DRE.** No HTML os arquivos iam em base64 para o storage do artifact.
-  Aqui os fechamentos já enviados estão servidos em `public/arquivos/` e podem ser baixados, mas
-  subir um novo pelo painel precisa de um lugar para guardar o arquivo (blob store ou o próprio
-  registro do HubSpot). Upload de planilha de avaliação continua funcionando, porque ali só as
-  respostas ficam salvas, não o arquivo.
+- **Upload de fechamento na aba DRE.** Os 7 fechamentos já enviados estão em `public/arquivos/` e
+  podem ser baixados, mas subir um novo precisa de um lugar para guardar o arquivo (blob store ou
+  o próprio registro do HubSpot). O upload de planilha de avaliação continua funcionando, porque
+  ali só as respostas ficam salvas, não o arquivo.
+- **O snapshot manual** (`data/turmas.json`, 416 alunos de 02/09/2026) foi removido — os alunos
+  agora vêm do CRM. Ele segue no histórico do git.

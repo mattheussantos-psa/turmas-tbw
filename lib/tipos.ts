@@ -68,6 +68,8 @@ export type Quali = {
 };
 
 export type Estado = {
+  /** Alunos vindos do HubSpot nesta carga. Não é persistido — vem da API a cada abertura. */
+  deals: Deal[];
   linhas: Record<string, LinhaEstado>;
   espera: Record<string, EsperaEstado>;
   dre: Record<string, DreEstado>;

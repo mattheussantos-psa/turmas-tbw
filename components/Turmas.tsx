@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Estado, LinhaEstado, Status } from "@/lib/tipos";
 import { fmtMoney, monthKey, STATUS_LABELS } from "@/lib/fmt";
 import { dealId } from "@/lib/estado";
-import { ORDEM_LINHAS, statusEfetivo, todasTurmas, valorDaLinha } from "@/lib/derivado";
+import { ordemLinhas, statusEfetivo, todasTurmas, valorDaLinha } from "@/lib/derivado";
 
 type Props = {
   estado: Estado;
@@ -19,7 +19,7 @@ export default function Turmas({ estado, atualizar }: Props) {
   const turmas = todasTurmas(estado);
   const filtroValido = turmaFiltro === "Todas" || turmas.includes(turmaFiltro) ? turmaFiltro : "Todas";
 
-  const linhas = ORDEM_LINHAS.filter((d) => {
+  const linhas = ordemLinhas(estado).filter((d) => {
     const s = estado.linhas[dealId(d)];
     if (!s) return false;
     if (filtroValido !== "Todas" && s.turma !== filtroValido) return false;

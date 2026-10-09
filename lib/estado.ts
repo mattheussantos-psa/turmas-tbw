@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Deal, DreEstado, Estado, EsperaEstado, LinhaEstado } from "./tipos";
-import { DEALS, DRE_SEED, ESPERA_NOMES } from "./dados";
+import { DRE_SEED, ESPERA_NOMES } from "./dados";
 import { slugify } from "./fmt";
 
-const CHAVE = "painel-turmas:v1";
+const CHAVE = "painel-turmas:v2";
 
 export const KPI_COLS_PADRAO = [
   { id: "cac", name: "CAC (Custo de Aquisição)" },
@@ -48,12 +48,17 @@ export function drePadrao(slug: string, receitaCalculada: number): DreEstado {
   };
 }
 
-function estadoInicial(): Estado {
+// As edições do usuário — só elas. Os alunos vêm do HubSpot a cada carga, nunca do localStorage,
+// senão uma turma renomeada no CRM ficaria presa no navegador de quem já abriu o painel.
+type Edicoes = Omit<Estado, "deals">;
+
+function estadoInicial(deals: Deal[]): Estado {
   const linhas: Record<string, LinhaEstado> = {};
-  for (const d of DEALS) linhas[dealId(d)] = linhaPadrao(d);
+  for (const d of deals) linhas[dealId(d)] = linhaPadrao(d);
   const espera: Record<string, EsperaEstado> = {};
   for (const n of ESPERA_NOMES) espera[slugify(n)] = esperaPadrao(n);
   return {
+    deals,
     linhas,
     espera,
     dre: {},
@@ -64,16 +69,22 @@ function estadoInicial(): Estado {
 }
 
 // ponytail: edições ficam no localStorage do navegador — some se trocar de máquina e não é
-// compartilhado entre pessoas. Quando status/nota/onboarding/mentoria virarem propriedades
-// de negócio no HubSpot, a gravação passa a ser lá e isto aqui vira só cache de rascunho.
-function ler(): Estado {
-  const base = estadoInicial();
-  if (typeof window === "undefined") return base;
+// compartilhado entre pessoas. Quando status/nota/onboarding/mentoria virarem propriedades de
+// negócio no HubSpot, a gravação passa a ser lá e isto aqui vira só cache de rascunho.
+function comEdicoesSalvas(base: Estado): Estado {
   const bruto = window.localStorage.getItem(CHAVE);
   if (!bruto) return base;
-  const salvo = JSON.parse(bruto) as Partial<Estado>;
+  const salvo = JSON.parse(bruto) as Partial<Edicoes>;
+
+  // Só reaplica edição de linha que ainda existe no HubSpot; negócio que saiu do funil some junto.
+  const linhas = { ...base.linhas };
+  for (const [id, edicao] of Object.entries(salvo.linhas || {})) {
+    if (linhas[id]) linhas[id] = { ...linhas[id], ...edicao };
+  }
+
   return {
-    linhas: { ...base.linhas, ...(salvo.linhas || {}) },
+    deals: base.deals,
+    linhas,
     espera: { ...base.espera, ...(salvo.espera || {}) },
     dre: salvo.dre || {},
     kpiCols: salvo.kpiCols || base.kpiCols,
@@ -82,24 +93,47 @@ function ler(): Estado {
   };
 }
 
+function salvar(e: Estado) {
+  const { deals: _fora, ...edicoes } = e;
+  window.localStorage.setItem(CHAVE, JSON.stringify(edicoes));
+}
+
+export type Carga =
+  | { fase: "carregando" }
+  | { fase: "erro"; mensagem: string }
+  | { fase: "pronto"; buscadoEm: string };
+
 export function usePainel() {
   const [estado, setEstado] = useState<Estado | null>(null);
+  const [carga, setCarga] = useState<Carga>({ fase: "carregando" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Só depois da hidratação, senão o servidor renderiza um estado e o cliente outro.
-  useEffect(() => setEstado(ler()), []);
+  const carregar = useCallback(async (refresh = false) => {
+    setCarga({ fase: "carregando" });
+    try {
+      const res = await fetch("/api/alunos" + (refresh ? "?refresh=1" : ""));
+      const corpo = await res.json();
+      if (!res.ok) throw new Error(corpo?.erro || `/api/alunos respondeu ${res.status}`);
+      setEstado(comEdicoesSalvas(estadoInicial(corpo.alunos)));
+      setCarga({ fase: "pronto", buscadoEm: corpo.buscadoEm });
+    } catch (e) {
+      setCarga({ fase: "erro", mensagem: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   const atualizar = useCallback((fn: (e: Estado) => Estado) => {
     setEstado((atual) => {
       if (!atual) return atual;
       const novo = fn(atual);
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        window.localStorage.setItem(CHAVE, JSON.stringify(novo));
-      }, 300);
+      timer.current = setTimeout(() => salvar(novo), 300);
       return novo;
     });
   }, []);
 
-  return { estado, atualizar };
+  return { estado, carga, atualizar, recarregar: () => carregar(true) };
 }
