@@ -1,10 +1,17 @@
 "use client";
 
-import type { Estado } from "@/lib/tipos";
+import { useState } from "react";
+import type { Deal, Estado } from "@/lib/tipos";
 import { fmtMoney, monthKey } from "@/lib/fmt";
 import { alunosDaTurma, receitaDaTurma, statusEfetivo, todasTurmas, valorDaLinha } from "@/lib/derivado";
+import { dealId } from "@/lib/estado";
+import Detalhe, { type LinhaDetalhe } from "./Detalhe";
+
+type Aberto = { titulo: string; subtitulo: string; linhas: LinhaDetalhe[] };
 
 export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; buscadoEm: string }) {
+  const [aberto, setAberto] = useState<Aberto | null>(null);
+
   // Agregados da base inteira — de propósito ignoram os filtros da aba Turmas.
   const totalAlunos = estado.deals.length;
   const totalReceita = estado.deals.reduce((s, d) => s + valorDaLinha(estado, d), 0);
@@ -27,6 +34,49 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
   const naEspera = Object.keys(estado.espera).length;
   const maxCount = Math.max(1, ...porTurma.map((t) => t.count));
   const maxReceita = Math.max(1, ...porTurma.map((t) => t.receita));
+
+  // O que o painel mostra é sempre o estado editado, não o que veio cru do HubSpot — por isso a
+  // lista do popup lê de estado.linhas, igual aos números dos cards.
+  function comoLinha(d: Deal): LinhaDetalhe {
+    const s = estado.linhas[dealId(d)];
+    return {
+      nome: s?.name || d.name,
+      meio: s?.turma || d.turma,
+      direita: fmtMoney(s?.amount) || "—",
+      url: d.hubspot_url,
+    };
+  }
+
+  const ordenarPorNome = (a: LinhaDetalhe, b: LinhaDetalhe) => a.nome.localeCompare(b.nome, "pt-BR");
+
+  function abrirTodos() {
+    setAberto({
+      titulo: "Alunos confirmados",
+      subtitulo: `${totalAlunos} negócios ganhos no Funil de Vendas B2C · ${fmtMoney(totalReceita)}`,
+      linhas: estado.deals.map(comoLinha).sort(ordenarPorNome),
+    });
+  }
+
+  function abrirEspera() {
+    setAberto({
+      titulo: "Lista de espera",
+      subtitulo: `${naEspera} interessados sem turma confirmada · cadastro manual, não vem do HubSpot`,
+      linhas: Object.values(estado.espera)
+        .map((e) => ({ nome: e.name, meio: e.turmaInteresse || "—", direita: e.chamado ? "contatado" : "—" }))
+        .sort(ordenarPorNome),
+    });
+  }
+
+  function abrirTurma(turma: string, receita: boolean) {
+    const linhas = alunosDaTurma(estado, turma).map(comoLinha);
+    setAberto({
+      titulo: turma,
+      subtitulo: receita
+        ? `${linhas.length} aluno(s) · ${fmtMoney(receitaDaTurma(estado, turma))}`
+        : `${linhas.length} aluno(s) nesta turma`,
+      linhas: linhas.sort(ordenarPorNome),
+    });
+  }
 
   return (
     <div>
@@ -51,10 +101,10 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
       </div>
 
       <div className="kpis">
-        <Kpi num={String(totalAlunos)} label="Alunos confirmados (todas as turmas)" />
+        <Kpi num={String(totalAlunos)} label="Alunos confirmados (todas as turmas)" onClick={abrirTodos} />
         <Kpi num={fmtMoney(totalReceita) || "R$ 0,00"} label="Receita total confirmada" />
         <Kpi num={fmtMoney(ticketMedio) || "R$ 0,00"} label="Ticket médio" />
-        <Kpi num={String(naEspera)} label="Na lista de espera" />
+        <Kpi num={String(naEspera)} label="Na lista de espera" onClick={abrirEspera} />
         <Kpi num={String(alerta)} label="Precisam de atenção agora" alerta={alerta > 0} />
       </div>
 
@@ -69,6 +119,7 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
                 cor={t.turma === proximaTurma ? "next" : "blue"}
                 pct={(t.count / maxCount) * 100}
                 valor={`${t.count} aluno${t.count === 1 ? "" : "s"}`}
+                onClick={() => abrirTurma(t.turma, false)}
               />
             ))
           ) : (
@@ -85,6 +136,7 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
                 cor="orange"
                 pct={(t.receita / maxReceita) * 100}
                 valor={fmtMoney(t.receita) || "R$ 0,00"}
+                onClick={() => abrirTurma(t.turma, true)}
               />
             ))
           ) : (
@@ -92,29 +144,68 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
           )}
         </div>
       </div>
+
+      {aberto && (
+        <Detalhe
+          titulo={aberto.titulo}
+          subtitulo={aberto.subtitulo}
+          linhas={aberto.linhas}
+          onFechar={() => setAberto(null)}
+        />
+      )}
     </div>
   );
 }
 
-function Kpi({ num, label, alerta }: { num: string; label: string; alerta?: boolean }) {
-  return (
-    <div className="kpi">
+function Kpi({
+  num,
+  label,
+  alerta,
+  onClick,
+}: {
+  num: string;
+  label: string;
+  alerta?: boolean;
+  onClick?: () => void;
+}) {
+  // Sem onClick continua sendo um bloco comum; com onClick vira botão de verdade, para funcionar
+  // no teclado e ser anunciado como clicável.
+  const conteudo = (
+    <>
       <div className="num" style={alerta ? { color: "var(--warn)" } : undefined}>
         {num}
       </div>
       <div className="label">{label}</div>
-    </div>
+    </>
+  );
+  if (!onClick) return <div className="kpi">{conteudo}</div>;
+  return (
+    <button type="button" className="kpi clicavel" onClick={onClick} title="Ver quem está nesta conta">
+      {conteudo}
+    </button>
   );
 }
 
-function Barra({ label, cor, pct, valor }: { label: string; cor: string; pct: number; valor: string }) {
+function Barra({
+  label,
+  cor,
+  pct,
+  valor,
+  onClick,
+}: {
+  label: string;
+  cor: string;
+  pct: number;
+  valor: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="hbar-row">
+    <button type="button" className="hbar-row clicavel" onClick={onClick} title={`Ver os alunos de ${label}`}>
       <span className="hbar-label">{label}</span>
-      <div className="hbar-track">
-        <div className={`hbar-fill ${cor}`} style={{ width: `${pct.toFixed(1)}%` }} />
-      </div>
+      <span className="hbar-track">
+        <span className={`hbar-fill ${cor}`} style={{ width: `${pct.toFixed(1)}%` }} />
+      </span>
       <span className="hbar-value">{valor}</span>
-    </div>
+    </button>
   );
 }
