@@ -4,6 +4,10 @@ import { buscarAlunos } from "@/lib/hubspot";
 
 export const dynamic = "force-dynamic";
 
+// São ~8 páginas de busca com pausa entre elas, mais os lotes de associação e de contatos. Passa
+// folgado do limite padrão de 10s da Vercel, e um timeout aqui aparece como erro genérico.
+export const maxDuration = 60;
+
 // Cache com refresh manual: a busca no HubSpot só roda de novo quando alguém chama
 // /api/alunos?refresh=1. Entre um refresh e outro todo mundo lê o mesmo resultado.
 const alunosEmCache = unstable_cache(buscarAlunos, ["alunos-hubspot"], { tags: ["alunos"] });

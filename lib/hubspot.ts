@@ -45,8 +45,19 @@ function headers() {
 // Em 403 por scope faltando, o próprio HubSpot nomeia o que falta em context.requiredGranularScopes.
 // É a única fonte confiável disso: qual scope cada endpoint exige não está documentado de forma
 // completa, então em vez de adivinhar a lista nós mostramos a resposta da API.
-async function hs(caminho: string, init?: RequestInit) {
+const dorme = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function hs(caminho: string, init?: RequestInit, tentativa = 0): Promise<any> {
   const res = await fetch(BASE + caminho, { ...init, headers: headers(), cache: "no-store" });
+
+  // 429 é limite por segundo do HubSpot, não erro de permissão: a chamada estava certa, só veio
+  // rápido demais. Espera o que ele mandar esperar (ou dobra sozinho) e tenta de novo.
+  if (res.status === 429 && tentativa < 6) {
+    const retryAfter = Number(res.headers.get("Retry-After"));
+    await dorme(retryAfter > 0 ? retryAfter * 1000 : 2 ** tentativa * 500);
+    return hs(caminho, init, tentativa + 1);
+  }
+
   if (!res.ok) {
     const corpo = await res.text().catch(() => "");
     const metodo = init?.method || "GET";
@@ -106,6 +117,9 @@ async function buscarGanhos(): Promise<DealBruto[]> {
     out.push(...(data.results ?? []));
     after = data.paging?.next?.after;
     if (!after) break;
+    // O endpoint de busca do HubSpot corta em poucas chamadas por segundo. Um respiro entre as
+    // páginas sai mais barato que gastar as tentativas de retry a cada página.
+    await dorme(260);
   }
   return out;
 }
