@@ -3,7 +3,15 @@
 import { useState } from "react";
 import type { Deal, Estado } from "@/lib/tipos";
 import { fmtMoney, monthKey } from "@/lib/fmt";
-import { alunosDaTurma, receitaDaTurma, statusEfetivo, todasTurmas, valorDaLinha } from "@/lib/derivado";
+import {
+  alunosDaTurma,
+  alunosEmEspera,
+  alunosEmTurma,
+  receitaDaTurma,
+  statusEfetivo,
+  todasTurmas,
+  valorDaLinha,
+} from "@/lib/derivado";
 import { dealId } from "@/lib/estado";
 import Detalhe, { type LinhaDetalhe } from "./Detalhe";
 
@@ -12,13 +20,16 @@ type Aberto = { titulo: string; subtitulo: string; linhas: LinhaDetalhe[] };
 export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; buscadoEm: string }) {
   const [aberto, setAberto] = useState<Aberto | null>(null);
 
-  // Agregados da base inteira — de propósito ignoram os filtros da aba Turmas.
-  const totalAlunos = estado.deals.length;
-  const totalReceita = estado.deals.reduce((s, d) => s + valorDaLinha(estado, d), 0);
+  // Agregados da base inteira — de propósito ignoram os filtros da aba Turmas. Quem está em fila
+  // de espera não tem turma, então fica fora destes números e conta só no card da espera.
+  const emTurma = alunosEmTurma(estado);
+  const emEspera = alunosEmEspera(estado);
+  const totalAlunos = emTurma.length;
+  const totalReceita = emTurma.reduce((s, d) => s + valorDaLinha(estado, d), 0);
   const ticketMedio = totalAlunos ? totalReceita / totalAlunos : 0;
 
   const contagem = { ok: 0, divergencia: 0, nao_encontrado: 0, resolvido: 0 };
-  estado.deals.forEach((d) => contagem[statusEfetivo(estado, d)]++);
+  emTurma.forEach((d) => contagem[statusEfetivo(estado, d)]++);
   const alerta = contagem.divergencia + contagem.nao_encontrado;
 
   const turmas = todasTurmas(estado);
@@ -31,7 +42,8 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
   const mesAtual = new Date().getMonth() + 1;
   const proximaTurma = turmas.find((t) => monthKey(t) >= mesAtual) || turmas[0] || null;
 
-  const naEspera = Object.keys(estado.espera).length;
+  const naEspera = emEspera.length;
+  const receitaEmEspera = emEspera.reduce((s, d) => s + valorDaLinha(estado, d), 0);
   const maxCount = Math.max(1, ...porTurma.map((t) => t.count));
   const maxReceita = Math.max(1, ...porTurma.map((t) => t.receita));
 
@@ -53,17 +65,15 @@ export default function VisaoGeral({ estado, buscadoEm }: { estado: Estado; busc
     setAberto({
       titulo: "Alunos confirmados",
       subtitulo: `${totalAlunos} negócios ganhos no Funil de Vendas B2C · ${fmtMoney(totalReceita)}`,
-      linhas: estado.deals.map(comoLinha).sort(ordenarPorNome),
+      linhas: emTurma.map(comoLinha).sort(ordenarPorNome),
     });
   }
 
   function abrirEspera() {
     setAberto({
       titulo: "Lista de espera",
-      subtitulo: `${naEspera} interessados sem turma confirmada · cadastro manual, não vem do HubSpot`,
-      linhas: Object.values(estado.espera)
-        .map((e) => ({ nome: e.name, meio: e.turmaInteresse || "—", direita: e.chamado ? "contatado" : "—" }))
-        .sort(ordenarPorNome),
+      subtitulo: `${naEspera} já pagaram e aguardam turma · ${fmtMoney(receitaEmEspera) || "R$ 0,00"}`,
+      linhas: emEspera.map(comoLinha).sort(ordenarPorNome),
     });
   }
 

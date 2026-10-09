@@ -61,6 +61,26 @@ import { ehDoAno, montarAlunos } from "./lib/hubspot.ts";
         dealname: "",
       },
     },
+    // Lista de espera: entra mesmo sendo de 2027, porque é fila ativa hoje, não passado.
+    {
+      id: "6",
+      properties: {
+        turma_the_best_weekend_: "The Best Weekend | Lista de espera/27",
+        produto_de_interesse: "TBW Weekend (Presencial)",
+        amount: "17700",
+        dealname: "Flavio | TBW",
+      },
+    },
+    // Turma de 2025 sai, porque é passado.
+    {
+      id: "7",
+      properties: {
+        turma_the_best_weekend_: "The Best Weekend | outubro/25",
+        produto_de_interesse: "TBW Weekend (Presencial)",
+        amount: "10000",
+        dealname: "Antigo | TBW",
+      },
+    },
     // A turma também é multi-seleção: valor composto tem que traduzir parte por parte, senão cai
     // na tela sem tradução nenhuma (foi o que aconteceu na primeira carga real).
     {
@@ -81,11 +101,19 @@ import { ehDoAno, montarAlunos } from "./lib/hubspot.ts";
 
   const alunos = montarAlunos(brutos, nomes, turmaLabel, produtoLabel, "49656171");
 
-  assert.equal(alunos.length, 4, '"Não se aplica" deveria ter ficado de fora');
+  // 4 em turma + 1 em espera; "Não se aplica" e a turma de 2025 ficam de fora.
+  assert.equal(alunos.length, 5);
+  assert.equal(alunos.filter((a) => a.espera).length, 1);
+  assert.equal(alunos.some((a) => a.turma.includes("outubro/25")), false, "2025 não deveria entrar");
   const porId = Object.fromEntries(alunos.map((a) => [a.key, a]));
 
   // O que mais importa: a turma mostrada é o LABEL, não o value.
   assert.equal(porId["1"].turma, "TBW SP | Abril 2026");
+
+  // Fila de espera de 2027 entra e vem marcada; o nome encurta igual ao resto.
+  assert.equal(porId["6"].espera, true);
+  assert.equal(porId["6"].turma, "TBW | Lista de espera/27");
+  assert.equal(porId["6"].amount, 17700);
   assert.equal(porId["2"].turma, "TBW POA | Julho 2026");
 
   // Produto multi-seleção: cada parte traduzida, juntas num rótulo só.
@@ -105,6 +133,7 @@ import { ehDoAno, montarAlunos } from "./lib/hubspot.ts";
 
   assert.equal(porId["1"].hubspot_url, "https://app.hubspot.com/contacts/49656171/record/0-3/1");
   assert.equal(porId["1"].status, "ok");
+  assert.equal(porId["1"].espera, false);
 
   // Cada negócio tem id próprio, então a chave da linha nunca colide.
   assert.equal(new Set(alunos.map((a) => a.key)).size, alunos.length);
@@ -212,8 +241,8 @@ function montarRelatorio(dias: { rows: (string | number)[][] }[]) {
 
 // ---- os dados que ainda não vêm do CRM continuam de pé ----
 {
-  const espera = JSON.parse(readFileSync(new URL("./data/espera.json", import.meta.url), "utf8"));
-  assert.equal(espera.length, 33);
+  
+  
   const dre = JSON.parse(readFileSync(new URL("./data/dre.json", import.meta.url), "utf8"));
   assert.equal(Object.keys(dre).length, 7);
 }

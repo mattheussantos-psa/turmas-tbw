@@ -19,7 +19,7 @@ npm test                     # check do mapeamento do HubSpot + do relatório de
 |---|---|
 | Visão Geral | agregados sobre os alunos vindos do HubSpot |
 | Turmas | **HubSpot ao vivo** — `/api/alunos` |
-| Lista de Espera | `data/espera.json` — 33 nomes, ainda manual |
+| Lista de Espera | **HubSpot ao vivo** — negócios ganhos cuja turma é uma lista de espera |
 | Avaliações | `data/avaliacoes.json` + PDFs em `public/arquivos/`; aceita upload de planilha |
 | KPIs | referência calculada das turmas + colunas livres do usuário |
 | DRE | `data/dre.json` (fechamentos CSX de 21/09/2026) + fechamentos em `public/arquivos/` |
@@ -41,6 +41,10 @@ Além disso o painel só mostra **turmas do ano corrente** (`ANO` em `lib/hubspo
 sobrescritível por `HUBSPOT_ANO`). Os rótulos citam o ano de três jeitos — `/26`, `/2026` e ` 2026` —
 e os três são reconhecidos. Um rótulo **sem ano nenhum** é mantido de propósito: se criarem uma opção
 nova em outro formato, ela aparece na tela em vez de sumir calada.
+
+As turmas de **lista de espera ficam fora do recorte de ano**: quem aguarda uma turma de 2027 é fila
+ativa hoje, não passado. Esses negócios saem dos gráficos e dos totais por turma (não têm turma) e
+alimentam a aba Lista de Espera, com turma de espera, valor já pago e link para o registro.
 
 `The Best Weekend` é encurtado para `TBW` na exibição, porque o nome por extenso não cabe na coluna.
 Cuidado: existe um `1076664460` com label "Ganho / Contrato assinado" que é do funil **B2B**.

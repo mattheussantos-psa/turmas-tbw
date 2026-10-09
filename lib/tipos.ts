@@ -1,7 +1,4 @@
-// Um registro do snapshot do HubSpot: negócio do Funil de Vendas B2C com stage Ganho.
-// `key` é a identidade da LINHA, não do negócio: 143 dos 416 registros vieram sem hubspot_id
-// (são os "não encontrados") e há ids repetidos entre pessoas diferentes, então o id do HubSpot
-// serve só para o link. Quando a integração entrar, cada linha passa a ter id de negócio de verdade.
+// Um aluno: negócio do Funil de Vendas B2C no estágio Ganho. `key` é o id do negócio no HubSpot.
 export type Deal = {
   key: string;
   name: string;
@@ -12,6 +9,8 @@ export type Deal = {
   nota: string;
   hubspot_id: number;
   hubspot_url: string;
+  /** A turma do CRM é uma lista de espera: a pessoa já pagou mas ainda não tem turma definida. */
+  espera: boolean;
 };
 
 export type Status = "ok" | "divergencia" | "nao_encontrado" | "resolvido";
@@ -25,13 +24,8 @@ export type LinhaEstado = {
   statusOverride: Status | null;
   onboarding: boolean;
   mentoria: boolean;
-};
-
-export type EsperaEstado = {
-  name: string;
-  turmaInteresse: string;
-  nota: string;
-  chamado: boolean;
+  /** Marcação manual da aba Lista de Espera: já falaram com a pessoa. */
+  contatado: boolean;
 };
 
 export type DreEstado = {
@@ -71,7 +65,6 @@ export type Estado = {
   /** Alunos vindos do HubSpot nesta carga. Não é persistido — vem da API a cada abertura. */
   deals: Deal[];
   linhas: Record<string, LinhaEstado>;
-  espera: Record<string, EsperaEstado>;
   dre: Record<string, DreEstado>;
   kpiCols: KpiColuna[];
   kpiCells: Record<string, Record<string, string>>;

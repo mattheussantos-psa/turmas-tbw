@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Deal, DreEstado, Estado, EsperaEstado, LinhaEstado } from "./tipos";
-import { DRE_SEED, ESPERA_NOMES } from "./dados";
-import { slugify } from "./fmt";
+import type { Deal, DreEstado, Estado, LinhaEstado } from "./tipos";
+import { DRE_SEED } from "./dados";
 
 const CHAVE = "painel-turmas:v2";
 
@@ -27,11 +26,8 @@ export function linhaPadrao(d: Deal): LinhaEstado {
     statusOverride: null,
     onboarding: false,
     mentoria: false,
+    contatado: false,
   };
-}
-
-export function esperaPadrao(name: string): EsperaEstado {
-  return { name, turmaInteresse: "", nota: "", chamado: false };
 }
 
 export function drePadrao(slug: string, receitaCalculada: number): DreEstado {
@@ -55,12 +51,9 @@ type Edicoes = Omit<Estado, "deals">;
 function estadoInicial(deals: Deal[]): Estado {
   const linhas: Record<string, LinhaEstado> = {};
   for (const d of deals) linhas[dealId(d)] = linhaPadrao(d);
-  const espera: Record<string, EsperaEstado> = {};
-  for (const n of ESPERA_NOMES) espera[slugify(n)] = esperaPadrao(n);
   return {
     deals,
     linhas,
-    espera,
     dre: {},
     kpiCols: KPI_COLS_PADRAO.map((c) => ({ ...c })),
     kpiCells: {},
@@ -85,7 +78,6 @@ function comEdicoesSalvas(base: Estado): Estado {
   return {
     deals: base.deals,
     linhas,
-    espera: { ...base.espera, ...(salvo.espera || {}) },
     dre: salvo.dre || {},
     kpiCols: salvo.kpiCols || base.kpiCols,
     kpiCells: salvo.kpiCells || {},

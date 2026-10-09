@@ -14,6 +14,13 @@ const PROP_PRODUTO = "produto_de_interesse";
 // e ficam de fora do painel.
 const NAO_E_TURMA = new Set(["Não se aplica", "Nenhuma", "Cancelado", ""]);
 
+// Turmas que na verdade são fila de espera: a pessoa já é negócio ganho e já pagou, mas ainda não
+// tem turma. Ficam FORA do recorte de ano de propósito — quem aguarda uma turma de 2027 é fila
+// ativa hoje, não passado.
+export function ehListaDeEspera(turma: string): boolean {
+  return /lista de espera/i.test(turma);
+}
+
 // O painel é das turmas deste ano. Para virar 2027, muda só esta linha.
 const ANO = Number((process.env.HUBSPOT_ANO ?? "").trim()) || 2026;
 
@@ -210,7 +217,9 @@ export function montarAlunos(
     const turmaValue = (d.properties[PROP_TURMA] ?? "").trim();
     if (NAO_E_TURMA.has(turmaValue)) continue;
     const turma = encurtar(traduzir(turmaValue, turmaLabel));
-    if (!turma || !ehDoAno(turma)) continue;
+    if (!turma) continue;
+    const espera = ehListaDeEspera(turma);
+    if (!espera && !ehDoAno(turma)) continue;
 
     const produto = traduzir(d.properties[PROP_PRODUTO], produtoLabel);
     const amount = d.properties.amount;
@@ -226,6 +235,7 @@ export function montarAlunos(
       nota: "",
       hubspot_id: Number(d.id),
       hubspot_url: `https://app.hubspot.com/contacts/${portalId}/record/0-3/${d.id}`,
+      espera,
     });
   }
 
