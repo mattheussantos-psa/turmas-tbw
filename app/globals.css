@@ -260,7 +260,11 @@ footer { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line)
 .kpi.clicavel:focus-visible, .hbar-row.clicavel:focus-visible {
   outline: 2px solid var(--psa-blue); outline-offset: 2px;
 }
-.hbar-row.clicavel .hbar-track { display: block; }
+/* <button> só aceita conteúdo de frase, então trilha e preenchimento viraram <span>. Span é inline
+   e ignora width/height, que é justamente como a barra é desenhada — os dois precisam voltar a ser
+   bloco, senão o gráfico perde o preenchimento e some o comparativo entre turmas. */
+.hbar-row.clicavel .hbar-track,
+.hbar-row.clicavel .hbar-fill { display: block; }
 
 dialog.detalhe {
   width: min(900px, 92vw); max-height: 82vh; padding: 0; border: none;
