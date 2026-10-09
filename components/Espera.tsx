@@ -48,6 +48,7 @@ export default function Espera({ estado, atualizar }: Props) {
         </div>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr>
@@ -106,6 +107,7 @@ export default function Espera({ estado, atualizar }: Props) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

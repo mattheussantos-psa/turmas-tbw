@@ -88,6 +88,7 @@ export default function Turmas({ estado, atualizar }: Props) {
         </div>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr>
@@ -114,6 +115,7 @@ export default function Turmas({ estado, atualizar }: Props) {
                   <input
                     className="name-input"
                     type="text"
+                    title={s.name}
                     value={s.name}
                     onChange={(ev) => editar(id, "name", ev.target.value)}
                   />
@@ -131,6 +133,7 @@ export default function Turmas({ estado, atualizar }: Props) {
                   <input
                     className="turma-input"
                     type="text"
+                    title={s.turma}
                     value={s.turma}
                     onChange={(ev) => editar(id, "turma", ev.target.value)}
                   />
@@ -139,6 +142,7 @@ export default function Turmas({ estado, atualizar }: Props) {
                   <input
                     className="produto-input"
                     type="text"
+                    title={s.produto}
                     value={s.produto}
                     onChange={(ev) => editar(id, "produto", ev.target.value)}
                   />
@@ -204,6 +208,7 @@ export default function Turmas({ estado, atualizar }: Props) {
           })}
         </tbody>
       </table>
+      </div>
 
       <div className="callout">
         <strong>TUDO NESTA TABELA É EDITÁVEL</strong>
